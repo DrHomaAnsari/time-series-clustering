@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ts-cluster/schemas/run_summary.schema.json",
+  "title": "ts_cluster run summary",
+  "description": "Compact, self-contained record of one run. Designed to be read in full by an agent to answer follow-up questions without loading parquet artifacts or re-running. Size must not scale with entity or feature count. Hand-authored; see schemas/README.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "run_name", "status", "created_at",
+    "config_hash", "input", "resolved_params"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Version of this schema. Present from 1.0 so consumers have something to branch on."
+    },
+    "run_name": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["completed", "failed"],
+      "description": "A failed run still writes a summary; stages that never ran are null and `error` is populated."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "duration_seconds": { "type": ["number", "null"], "minimum": 0 },
+    "config_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n_entities", "n_timesteps", "fingerprint"],
+      "properties": {
+        "n_entities": { "type": "integer", "minimum": 0 },
+        "n_timesteps": { "type": "integer", "minimum": 0 },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Over index, column labels and values. Answers 'same data as last run?' without loading the input."
+        }
+      }
+    },
+
+    "pipeline": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["features_extracted", "features_after_cleaning", "features_after_selection", "reduction_method"],
+      "properties": {
+        "features_extracted": { "type": "integer", "minimum": 0 },
+        "features_after_cleaning": { "type": "integer", "minimum": 0 },
+        "features_after_selection": { "type": "integer", "minimum": 0 },
+        "reduction_method": { "enum": ["pca", "umap", "none"] },
+        "n_components": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+
+    "clustering": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["n_clusters", "noise_fraction", "cluster_sizes", "n_entities_dropped"],
+      "description": "Facts about the partition. Scores live under `metrics`.",
+      "properties": {
+        "n_clusters": {
+          "type": "integer", "minimum": 0,
+          "description": "Excludes noise. Zero is a valid result, not a failure."
+        },
+        "noise_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "cluster_sizes": {
+          "type": "object",
+          "description": "Label (as string, per JSON) to entity count. Excludes -1, which is reported once as noise_fraction.",
+          "patternProperties": { "^[0-9]+$": { "type": "integer", "minimum": 1 } },
+          "additionalProperties": false
+        },
+        "n_entities_dropped": {
+          "type": "integer", "minimum": 0,
+          "description": "Removed by drop_entity policies. Distinct from noise; these carry label pd.NA in labels.parquet."
+        }
+      }
+    },
+
+    "metrics": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["internal", "external"],
+      "properties": {
+        "internal": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "relative_validity": {
+              "type": ["number", "null"],
+              "description": "MST-based DBCV approximation. Valid only for RELATIVE comparison between configs on the same dataset; never assert an absolute threshold and never present as a standalone quality score. See 05-evaluation.md."
+            }
+          }
+        },
+        "external": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "null means not applicable (no ground truth supplied) — never an omitted key.",
+          "properties": {
+            "ari": { "type": ["number", "null"], "minimum": -0.5, "maximum": 1 },
+            "ami": { "type": ["number", "null"], "minimum": -1, "maximum": 1 },
+            "noise_recall": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "n_clusters_error": { "type": ["integer", "null"] }
+          }
+        }
+      }
+    },
+
+    "warnings": {
+      "type": "array",
+      "description": "Validation and runtime warnings. Artifacts, not log lines — the caller never sees stdout.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "message"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^W[0-9]{3}$" },
+          "message": { "type": "string" },
+          "entity_count": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    },
+
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["stage", "type", "message"],
+      "properties": {
+        "stage": { "type": "string" },
+        "type": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+
+    "resolved_params": {
+      "type": "object",
+      "description": "The fully resolved config inlined, so the summary is self-contained. config.yaml is the human-editable copy; this is the record of what actually ran."
+    }
+  },
+
+  "allOf": [
+    {
+      "if":   { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+      "then": { "required": ["error"], "properties": { "error": { "type": "object" } } }
+    },
+    {
+      "if":   { "properties": { "status": { "const": "completed" } }, "required": ["status"] },
+      "then": { "required": ["duration_seconds", "pipeline", "clustering", "metrics"] }
+    }
+  ]
+}
