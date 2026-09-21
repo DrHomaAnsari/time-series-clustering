@@ -29,6 +29,7 @@ relevant spec before writing code; do not infer intent from the absence of code.
 | [`docs/specs/06-artifacts.md`](docs/specs/06-artifacts.md) | Run directory, JSON summary |
 | [`docs/specs/07-testing.md`](docs/specs/07-testing.md) | Test strategy |
 | [`ROADMAP.md`](ROADMAP.md) | Phase ledger and boundaries |
+| [`docs/decisions.md`](docs/decisions.md) | Implementation decisions the specs leave open — append-only |
 
 ## Commands
 
@@ -59,6 +60,36 @@ Python 3.11+, managed by `uv`. Do not use the system Python (3.9, EOL).
 - **Errors** — every validation failure states what was expected, what was received, and what to
   do about it. An agent reading the message should be able to fix the input without reading source.
 - **Tests** — new behaviour needs a test in the layer `07-testing.md` assigns it to.
+
+## How we work
+
+The process is as load-bearing as the code. Homa drives; I write. Run `/step` to take the next one.
+
+**Step = one function plus its test.** Budget: ≤50 new lines (implementation and test combined),
+≤1 new file. Over budget means the step was too big: split it. If it genuinely cannot be split,
+say the line count and the reason and wait for a yes before writing — never exceed it silently.
+Scaffolding steps (`pyproject.toml`, package skeleton) have no test and are exempt.
+
+**Decisions batch per stage, never per function.** Before the first line of a stage's code, list
+every real choice it contains — options, one-line tradeoff, a recommendation — and wait. Then
+implement function by function without further gating. A *new* decision appearing mid-stage is a
+stop, not a judgement call.
+
+**No speculative code.** Every function traces to a spec line, named in its docstring. No
+abstraction with one caller, no base class with one subclass, no config field absent from
+`03-config.md`, no `try`/`except` the spec does not require. The third caller earns the helper.
+
+**Non-obvious lines carry a `# why not X:` note** — one line: what the obvious alternative was and
+why it loses. That is where the real knowledge in this stack lives.
+
+**Log the decision.** Append one entry to [`docs/decisions.md`](docs/decisions.md) per resolved
+decision. If a decision contradicts a spec, the spec changes instead (Rule 2) — the log is only for
+what the specs leave open.
+
+**Response format.** Per step: a `Step:` line, decisions if any, the diff, then at most 4 lines —
+what landed, the why-not, the next step. Never restate the diff in prose; it is on screen. No
+preamble, no recap of what is already settled, no summary-of-changes section. Recommend one next
+step, not a menu.
 
 ## Rules
 

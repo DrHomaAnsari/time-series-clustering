@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/step-budget.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking step budget"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/decision-log.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking decision log"
+          }
+        ]
+      }
+    ]
+  }
+}
