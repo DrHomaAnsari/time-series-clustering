@@ -2,7 +2,7 @@
 name: pipeline
 status: draft
 phase: 1
-last-reviewed: 2026-09-19
+last-reviewed: 2026-09-26
 ---
 
 # Pipeline Contract
@@ -211,10 +211,12 @@ Noise is **excluded** from internal metric computation but **always reported** a
 | | |
 |---|---|
 | **In** | everything accumulated, `OutputConfig` |
-| **Out** | run directory path |
-| **Fails** | Unwritable path — checked **before** stage 1, not after the expensive work |
+| **Out** | run directory path, or `None` when `persist = false` |
+| **Fails** | Unwritable `output.root`, `output.run_dir` or `output.log_dir` — all checked **before** stage 1, not after the expensive work |
 
-Skipped entirely when `persist = false`. Layout in [`06-artifacts.md`](06-artifacts.md).
+Skipped when `persist = false`, with one exception: the run's log file is opened before stage 1 and
+retained either way ([`06-artifacts.md` §5](06-artifacts.md)). Layout in
+[`06-artifacts.md`](06-artifacts.md).
 
 ---
 
@@ -234,9 +236,21 @@ when a later stage fails, so a failed run is still diagnosable from disk.
 
 ### Logging vs. recording
 
-Log lines are for humans watching a run. **Anything a caller might need afterwards is written to
-the manifest**, because the primary caller reads results from disk after the process has exited
-and never sees stdout at all.
+Log lines are for humans watching a run; the manifest is the record. **Anything a caller might
+need afterwards is written to the manifest**, because the primary caller reads results from disk
+after the process has exited and never sees the stream at all.
+
+The log is nonetheless **persisted**, to `<output.log_dir>/<run_name>.log` and copied into the run
+directory as `run.log` ([`06-artifacts.md` §5](06-artifacts.md)). Persisting it does not promote it
+to a record. The division above is unchanged, and the rule that enforces it is absolute:
+**nothing may live only in the log.** Every warning and every decision that appears in the log
+also appears in the manifest or the summary.
+
+This revises the original position, which kept the log ephemeral because a stream the agent never
+reads is worthless. That was right about the stream and wrong about the file: a durable log is what
+makes a failed or exploratory run diagnosable afterwards, which is why it survives
+`persist = false`. The risk it introduces is real — a durable file looks like a safe place to
+record a finding — and the "never only in the log" rule is what holds that line.
 
 ### Module layout
 

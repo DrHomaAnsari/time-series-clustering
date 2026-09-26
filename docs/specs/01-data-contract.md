@@ -2,7 +2,7 @@
 name: data-contract
 status: draft
 phase: 1
-last-reviewed: 2026-09-19
+last-reviewed: 2026-09-26
 ---
 
 # Data Contract
@@ -195,7 +195,8 @@ A run returns a `ClusterResult`:
 | `metrics` | `dict` | Per [`05-evaluation.md`](05-evaluation.md) |
 | `validation` | `ValidationReport` | Warnings raised, entities dropped |
 | `config` | `Config` | Fully resolved config, defaults materialised |
-| `run_dir` | `Path` \| `None` | Where artifacts were written |
+| `run_dir` | `Path` \| `None` | Where artifacts were written; `None` when `output.persist = false` |
+| `log_path` | `Path` | Where this run's log was written. Never `None` — the log is written even when `persist = false`, and a log the caller cannot locate is a log it does not have |
 
 Every entity-indexed output carries the **input entity index**, including entities dropped by
 `drop_entity` policies — dropped entities appear with label `pd.NA`, distinguishable from noise

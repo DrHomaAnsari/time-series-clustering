@@ -2,7 +2,7 @@
 name: config
 status: draft
 phase: 1
-last-reviewed: 2026-09-19
+last-reviewed: 2026-09-26
 ---
 
 # Config — The Public API
@@ -190,15 +190,33 @@ HDBSCAN. Implementation is the standalone `hdbscan` package — see
 
 ## `output`
 
+Everything the library writes — run artifacts, run logs, and generated datasets — lands under a
+single configurable root. A library that scatters files across the working tree is one whose
+outputs cannot be found, relocated, or excluded from version control as a unit.
+
 | Field | Type | Default | Effect |
 |---|---|---|---|
-| `run_dir` | `Path` | `"runs"` | Parent directory for run directories |
-| `run_name` | `str` \| `null` | `null` | `null` = `{timestamp}-{config_hash[:8]}` |
-| `persist` | `bool` | `true` | `false` returns results in memory only and writes nothing |
+| `root` | `Path` | `"outputs"` | The one directory everything the library writes lands under. Relative values resolve against the process working directory, so the default is `./outputs` — inside the repo, and gitignored. Set an absolute path to send output elsewhere entirely |
+| `run_dir` | `Path` | `"runs"` | Parent directory for run directories, resolved **under `root`**. Must be relative; an absolute value raises. Relocating output is `root`'s job, and allowing both to escape gives two ways to express one thing |
+| `log_dir` | `Path` | `"logs"` | Where per-run log files are written, resolved under `root`. Must be relative. Deliberately **not** inside `run_dir` — see [`06-artifacts.md` §2](06-artifacts.md) |
+| `dataset_dir` | `Path` | `"datasets"` | Where [`04-simulation.md`](04-simulation.md) writes generated datasets, resolved under `root`. Must be relative |
+| `run_name` | `str` \| `null` | `null` | `null` = `{timestamp}-{config_hash[:8]}`. Names both the run directory and its log file, so the two are matched by inspection |
+| `persist` | `bool` | `true` | `false` returns results in memory only and writes **no run directory**. The log file is still written — see below |
+| `log_level` | `"DEBUG" \| "INFO" \| "WARNING" \| "ERROR"` | `"INFO"` | Verbosity of both the log file and the stream. Affects the log only, never results. There is no option to disable the log file in Phase 1 |
 | `write_feature_matrix` | `bool` | `true` | The largest artifact; disable when disk-bound |
 | `write_embedding` | `bool` | `true` | — |
 
 Layout and the JSON summary schema are specified in [`06-artifacts.md`](06-artifacts.md).
+
+### Why the log survives `persist = false`
+
+`persist = false` is for exploratory runs whose artifacts nobody wants to keep. Those are exactly
+the runs that misbehave, and a diagnostic trace is the one thing worth having when one does. The
+log is small, bounded by the run's duration, and costs nothing to keep.
+
+This is the single exception to "`persist = false` writes nothing", and it is narrow by
+construction: the log carries no results. Anything a caller might need is in the manifest and the
+summary, which `persist = false` genuinely does not write.
 
 ---
 

@@ -2,7 +2,7 @@
 name: testing
 status: draft
 phase: 1
-last-reviewed: 2026-09-19
+last-reviewed: 2026-09-26
 ---
 
 # Test Strategy
@@ -61,7 +61,10 @@ fails the suite.
 | Config | `extra="forbid"` rejects unknown fields; out-of-range values rejected; YAML/JSON round-trip is lossless; hash is stable across runs and identical for explicit-vs-defaulted equivalents |
 | Melt | Row count is `n_entities × n_timesteps`; sorted by `(entity_id, timestep)`; `timestep` is integer position, not the original label |
 | Result | Entity-indexed outputs carry the **full input index**; dropped entities are `pd.NA`, never `-1` |
-| Artifacts | `summary.json` validates against its schema; `status: failed` still writes a summary; colliding `run_name` raises; `persist=false` writes nothing |
+| Artifacts | `summary.json` validates against its schema; `status: failed` still writes a summary; colliding `run_name` raises; `persist=false` writes no run directory |
+| Output paths | Relative `output.root` resolves against the working directory; absolute `root` is honoured; an absolute `run_dir`, `log_dir` or `dataset_dir` raises; all three are checked for writability **before stage 1**, not after extraction |
+| Logging | Log file appears at `<log_dir>/<run_name>.log`, opened before stage 1; copied into the run directory as `run.log` on persist; `persist=false` still writes it, copies nothing, and leaves `ClusterResult.log_path` pointing at it; a failed run retains it; a colliding log filename raises |
+| **Log is never the only record** | Every warning id that appears in the log also appears in `summary.json` `warnings`. This is the test that makes a persisted log safe to have at all — see [`02-pipeline.md` § Logging vs. recording](02-pipeline.md) |
 
 ## 2. Synthetic ground-truth tests
 
@@ -116,6 +119,10 @@ meaning what it says.
 - **pytest**, `uv run pytest`.
 - Markers: `slow` for anything running tsfresh or UMAP. `uv run pytest -m "not slow"` is the
   edit-loop suite and must stay genuinely fast.
+- **Tests never write to the default output root.** Every test sets `output.root` to pytest's
+  `tmp_path`. A suite that writes into the repo's own `./outputs` pollutes the working tree it is
+  meant to be checking, and makes the gitignore the only thing standing between a test run and a
+  dirty diff.
 - **Fixtures are generated, not committed.** Presets are produced at fixed seeds in-test; no
   parquet binaries in git. `spec.json` regenerates any dataset exactly.
 - Contract tests build minimal frames inline — no tsfresh, no clustering.

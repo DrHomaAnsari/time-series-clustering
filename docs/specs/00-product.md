@@ -2,7 +2,7 @@
 name: product
 status: draft
 phase: 1
-last-reviewed: 2026-09-19
+last-reviewed: 2026-09-26
 ---
 
 # `ts_cluster` — Product Specification
@@ -106,7 +106,8 @@ decline and point here rather than implement.
 Phase 1 is complete when **all** of the following hold:
 
 1. A single config runs end-to-end: wide DataFrame → validation → features → selection →
-   scaling → reduction → clustering → evaluation → persisted run directory + JSON summary.
+   scaling → reduction → clustering → evaluation → persisted run directory, JSON summary, and run
+   log, all under the single configurable `output.root`.
 2. The simulation module generates labelled synthetic datasets and writes them to disk, and the
    pipeline recovers those known groups at or above the thresholds in
    [`05-evaluation.md`](05-evaluation.md).
@@ -146,7 +147,7 @@ in prose, identifiers, and error messages.
 | **Embedding** | The output of the reduction stage |
 | **Label** | A cluster assignment. `-1` means noise and is a real answer, never a failure |
 | **Noise fraction** | Share of entities labelled `-1`. A headline diagnostic, not an error |
-| **Run** | One end-to-end execution of a config, producing exactly one run directory |
+| **Run** | One end-to-end execution of a config, producing exactly one run directory and exactly one log file |
 | **Config** | The declarative object that fully determines a run. The public API |
 
 ## Related specs

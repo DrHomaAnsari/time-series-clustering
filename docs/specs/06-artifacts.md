@@ -2,7 +2,7 @@
 name: artifacts
 status: draft
 phase: 1
-last-reviewed: 2026-09-19
+last-reviewed: 2026-09-26
 ---
 
 # Run Artifacts
@@ -15,15 +15,26 @@ Anything not written here is effectively lost.
 ## 1. Layout
 
 ```
-<output.run_dir>/
-  <run_name>/
-    config.yaml          # fully resolved config — defaults materialised
-    manifest.json        # complete provenance and per-stage record
-    summary.json         # compact, agent-readable  ← read this first
-    labels.parquet       # entity_id → label, probability
-    features.parquet     # selected feature matrix      (optional)
-    embedding.parquet    # reduction output             (optional)
+<output.root>/                  # default ./outputs — inside the repo, gitignored
+  <output.run_dir>/             # default runs
+    <run_name>/
+      config.yaml        # fully resolved config — defaults materialised
+      manifest.json      # complete provenance and per-stage record
+      summary.json       # compact, agent-readable  ← read this first
+      labels.parquet     # entity_id → label, probability
+      features.parquet   # selected feature matrix      (optional)
+      embedding.parquet  # reduction output             (optional)
+      run.log            # copy of this run's log, written last
+  <output.log_dir>/             # default logs
+    <run_name>.log       # the live log — appended while the run works
+  <output.dataset_dir>/         # default datasets — see 04-simulation.md
 ```
+
+Every path is resolved under the single `output.root`, which is relative to the working directory
+by default and so lands inside the repo. The default root is gitignored: generated output is
+reproducible from a config and a seed, and committing it would put binaries in git that
+[`07-testing.md` §4](07-testing.md) exists to keep out. A caller wanting results outside the repo
+sets an absolute `output.root` and changes nothing else.
 
 `run_name` defaults to `{timestamp}-{config_hash[:8]}`, e.g. `20260919T143022Z-a1b2c3d4`. UTC,
 ISO-8601 basic format: sorts chronologically as text, and the hash suffix makes two runs of the
@@ -36,6 +47,13 @@ Write to a sibling temporary directory, then `rename` into place. A directory at
 
 Without this, a run interrupted mid-write leaves a directory that looks finished, and an agent
 reading it gets a truncated `labels.parquet` with no indication anything is wrong.
+
+**The log is the one thing that cannot obey this rule.** A log is only useful while the run is
+still going, and a file inside a not-yet-renamed staging directory is not visible to anyone
+watching. So the live log is written to `<output.log_dir>/<run_name>.log`, outside the run
+directory, and a finished copy is placed inside the run directory as `run.log` at persist time.
+The cost is one duplicated file; the alternatives are a log nobody can tail, or a run directory
+that appears complete before it is.
 
 ## 3. `summary.json` — the agent surface
 
@@ -125,18 +143,46 @@ tell a real regression from a dependency bump.
 The manifest **accumulates during the run** and is written even when a stage raises, so a failed
 run remains diagnosable from disk.
 
-## 5. Writing rules
+## 5. `run.log` — the human trace
+
+One file per run, named for the run: `<output.log_dir>/<run_name>.log`. Opened **before stage 1**
+and appended as the run proceeds, so it can be tailed while a twenty-minute extraction works. The
+same lines go to the stream at `output.log_level`.
+
+Contents are a narrative of execution: stage entry and exit, durations, input and output shapes,
+the config hash, and any warning as it is raised.
+
+> **Nothing may live only in the log.** Every warning, decision, and result recorded in the log is
+> *also* in `manifest.json` or `summary.json`. The log is a convenience for a human watching; the
+> manifest is the record. See [`02-pipeline.md` § Logging vs. recording](02-pipeline.md).
+
+This is the rule that makes a persisted log safe to add. Without it, the log becomes the easiest
+place to put a finding, and the primary caller — an agent reading `summary.json` after the process
+exited — never sees it. A durable log file makes that mistake *more* tempting than an ephemeral
+stream does, not less.
+
+| Situation | Behaviour |
+|---|---|
+| Normal run | Live log at `<output.log_dir>/<run_name>.log`; copied into the run directory as `run.log` at persist time |
+| `persist = false` | Live log still written. Nothing is copied, because there is no run directory |
+| Run fails | Log is closed and retained, and still copied in if the run directory was written. A failed run's log is the most valuable one |
+| Colliding `<run_name>.log` | Raises, like a colliding run directory. Nothing is ever appended to a previous run's log |
+
+## 6. Writing rules
 
 - Parquet for tabular artifacts — lossless dtypes and column labels, unlike CSV.
 - `labels.parquet` carries the **full input entity index**, including dropped entities with label
   `pd.NA`. Distinguishing "excluded from the run" from "clustered as noise" (`-1`) is the point;
   collapsing them corrupts downstream analysis silently.
-- `output.persist = false` writes nothing at all — no partial directory.
-- Path writability is checked **before stage 1**. Discovering an unwritable directory after a
-  twenty-minute extraction is a spec failure, not an unlucky run.
-- Nothing is ever overwritten. A colliding `run_name` raises.
+- `output.persist = false` writes **no run directory** — not a partial one, not an empty one. The
+  per-run log file is the sole exception and is still written; see §5.
+- **`output.root`, `output.log_dir` and `output.run_dir` are all checked for writability before
+  stage 1**, and the log file is opened there and then. Discovering an unwritable directory after a
+  twenty-minute extraction is a spec failure, not an unlucky run — and that applies to the log
+  path too, which is now on the critical path.
+- Nothing is ever overwritten. A colliding `run_name` raises, and so does a colliding log file.
 
-## 6. Retention
+## 7. Retention
 
 No automatic cleanup in Phase 1. Run directories accumulate and deleting them is the user's
 decision — a library that quietly removes prior results is a library that loses someone's work.

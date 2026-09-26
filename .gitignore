@@ -219,3 +219,8 @@ __marimo__/
 
 # macOS
 .DS_Store
+
+# ts_cluster output root (output.root) — runs, logs and generated datasets.
+# Everything here is reproducible from a config and a seed, so none of it is tracked;
+# docs/specs/07-testing.md forbids committed parquet binaries.
+outputs/

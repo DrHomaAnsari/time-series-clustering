@@ -2,7 +2,7 @@
 name: simulation
 status: draft
 phase: 1
-last-reviewed: 2026-09-19
+last-reviewed: 2026-09-26
 ---
 
 # Simulation
@@ -95,17 +95,28 @@ matching HDBSCAN's own convention so truth and prediction are directly comparabl
 ## 5. On-disk layout
 
 ```
-<path>/
+<output.root>/<output.dataset_dir>/<name>/   # default ./outputs/datasets/<name>
   wide.parquet       # the input frame
   truth.parquet      # ground-truth labels
   spec.json          # DatasetSpec + seed — enough to regenerate exactly
 ```
 
+`write(dataset, path)` takes its destination outright and reads no config — generating a corpus is
+a deliberate act by a caller, not a stage of a run, and threading an `OutputConfig` through it
+would buy nothing. The path above is the **convention**: it is where the preset corpus, the README
+walkthrough and the example notebook write, and what a caller supplying a bare dataset name
+resolves against. `output.dataset_dir` in [`03-config.md`](03-config.md) declares it in one place
+instead of leaving it hardcoded at each call site.
+
+Generated datasets therefore live inside the repo by default, under the same gitignored
+`output.root` as runs and logs.
+
 Parquet, because it round-trips dtypes and column labels losslessly; CSV does not, and a time
 axis silently reread as strings would trip `E010` on data we generated ourselves.
 
 `spec.json` makes every written dataset regenerable, so the corpus is reproducible from source
-rather than depending on committed binaries.
+rather than depending on committed binaries — which is why the default location is ignored by git
+rather than tracked, consistent with [`07-testing.md` §4](07-testing.md).
 
 ## 6. Preset corpus
 
