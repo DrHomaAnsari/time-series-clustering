@@ -10,7 +10,8 @@ last-reviewed: 2026-09-26
 **This is product code, not test scaffolding.** `ts_cluster.simulate` is a public, documented
 module, and generated datasets are written to disk explicitly.
 
-It serves three jobs at once, which is why it is built first rather than last:
+It serves three jobs at once, which is why it is built early — immediately after validation —
+rather than last:
 
 1. **Ground truth for testing** — the only way to assert that an unsupervised pipeline is correct.
 2. **Documentation and examples** — the README walkthrough and example notebook run on it, so

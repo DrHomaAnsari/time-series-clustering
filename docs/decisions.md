@@ -1,7 +1,7 @@
 ---
 name: decisions
 status: living
-last-reviewed: 2026-09-21
+last-reviewed: 2026-09-26
 ---
 
 # Decision log
@@ -37,3 +37,15 @@ genuinely silent about, plus the reasoning that would otherwise be lost between 
 **Over:** hooks that reject the edit outright; or instructions with no enforcement.
 **Because:** instructions in context drift over a long session and the model cannot notice its own drift; a blocking hook would also fire on legitimate over-budget steps that were agreed in advance.
 **Spec:** open.
+
+### 2026-09-26 · process · Build order
+**Chose:** stage by stage in pipeline order, each fully built and tested before the next — validation first, simulation second, config core third.
+**Over:** a thin end-to-end walking skeleton deepened later; simulation first, as `04-simulation.md` literally said.
+**Because:** validation is pure pandas and already laddered as 21 rule→test rows, ideal for calibrating the 50-line budget, and its contract tests build frames inline so it needs no simulated data. The late-integration risk of depth-first is covered by a heavy-dependency smoke test at stage 0.
+**Spec:** `04-simulation.md` amended to "built early — immediately after validation"; the rest of the order is open.
+
+### 2026-09-26 · process · Backlog shape, and who writes it
+**Chose:** one `BACKLOG.md` for order and progress; all stages listed now, each expanded into steps at its approved gate. Claude ticks one box per step in the same commit as the code, expands only at a gate, parks out-of-scope items, and never reorders or re-scopes. Gates stay in chat via `/step`.
+**Over:** a separate `plan.md` beside a status list; every Phase 1 step enumerated up front; GitHub Issues; gates run in plan mode.
+**Because:** a plan kept apart from its status drifts; steps enumerated past stage 2 would be guesses that churn; a tick in the same commit cannot disagree with the code; plan mode's workflow produces heavier gates than "options, tradeoff, recommendation".
+**Spec:** open — specs are silent on process.

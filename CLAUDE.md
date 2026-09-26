@@ -30,6 +30,7 @@ relevant spec before writing code; do not infer intent from the absence of code.
 | [`docs/specs/07-testing.md`](docs/specs/07-testing.md) | Test strategy |
 | [`ROADMAP.md`](ROADMAP.md) | Phase ledger and boundaries |
 | [`docs/decisions.md`](docs/decisions.md) | Implementation decisions the specs leave open — append-only |
+| [`BACKLOG.md`](BACKLOG.md) | Build order and progress for the current phase — the next step is its first unchecked box |
 
 ## Commands
 
@@ -85,6 +86,11 @@ why it loses. That is where the real knowledge in this stack lives.
 **Log the decision.** Append one entry to [`docs/decisions.md`](docs/decisions.md) per resolved
 decision. If a decision contradicts a spec, the spec changes instead (Rule 2) — the log is only for
 what the specs leave open.
+
+**Backlog.** [`BACKLOG.md`](BACKLOG.md) holds build order and progress. I tick one box per step,
+in the same commit as the code; expand a stage into steps only when its gate is approved; and park
+anything out of scope in one line rather than act on it. Reordering, deleting and re-scoping are
+Homa's.
 
 **Response format.** Per step: a `Step:` line, decisions if any, the diff, then at most 4 lines —
 what landed, the why-not, the next step. Never restate the diff in prose; it is on screen. No
