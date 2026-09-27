@@ -55,3 +55,9 @@ genuinely silent about, plus the reasoning that would otherwise be lost between 
 **Over:** self-contained specs that restate shared rules; bold, capitals and repetition to signal priority.
 **Because:** restated rules drift apart — the specs' own "each value appears exactly once", applied to themselves. Reasons stay because they are what lets a model extend a rule to cases the spec did not foresee; emphasis goes because a model that follows instructions precisely over-applies whatever is shouted, and when everything is bold nothing is. Anchors stay fixed because `BACKLOG.md` and `/step` point at them.
 **Spec:** open — specs are silent on their own style. Recorded as a rule in `CLAUDE.md` § Working with the specs.
+
+### 2026-09-27 · stack · Parquet engine
+**Chose:** Parquet written with pyarrow.
+**Over:** fastparquet; Feather (Arrow IPC); pandas' dependency-free writers (CSV, JSON, pickle, SQLite); tables kept in memory only.
+**Because:** only pyarrow reliably restores datetime column labels (else E010 fires on our own data) and `Int64` with `pd.NA` (else "dropped" collapses toward noise), and keeps the fingerprint stable across a reread. Pickle is lossless but pandas-version-bound and runs code on load; Feather is equally lossless but has less reach in other tools; in-memory only fails the Phase 1 exit.
+**Spec:** `tech-stack.md` amended — pyarrow added to the libraries table and removed from Open; `07-testing.md` Artifacts row gains the round-trip assertion that pins the lossless claim.

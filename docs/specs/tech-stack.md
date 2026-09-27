@@ -2,7 +2,7 @@
 name: tech-stack
 status: draft
 phase: 1
-last-reviewed: 2026-09-26
+last-reviewed: 2026-09-27
 ---
 
 # Tech stack
@@ -27,6 +27,7 @@ layout ([02](02-pipeline.md) § Module layout).
 | scikit-learn | Scaling and PCA | [03](03-config.md) |
 | umap-learn | Non-linear reduction. Brings numba, and runs single-threaded when seeded — the price of reproducibility | [03](03-config.md) § Determinism |
 | hdbscan | Clustering, behind a one-module adapter. Chosen over `sklearn.cluster.HDBSCAN` for `relative_validity_` and Phase 2's `approximate_predict` | [02 §8](02-pipeline.md) |
+| pyarrow | Parquet engine. Its pandas metadata restores datetime and numeric column labels and `Int64` with `pd.NA`, which fastparquet does not reliably do; CSV, JSON and pickle, the dependency-free alternatives, lose dtypes or are unsafe to load | [04 §5](04-simulation.md), [06 §6](06-artifacts.md) |
 
 ## Formats
 
@@ -46,7 +47,6 @@ mypy, clean on `src/ts_cluster`.
 
 Required by the specs, justified by none, so Rule 3 blocks each until a spec records why:
 
-- **Parquet engine** — for [04](04-simulation.md) and [06](06-artifacts.md)
 - **YAML library** — for [03](03-config.md)'s round-trip
 - **JSON Schema validator** — for runtime summary validation ([schemas](schemas/README.md))
 - **CI** — [schemas](schemas/README.md) assumes CI regenerates `config.schema.json`; no spec defines it
