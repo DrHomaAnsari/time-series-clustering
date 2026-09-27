@@ -10,7 +10,7 @@ approved gate, and appends to Parked. Nothing else: reordering, deleting and re-
 
 ## Phase 1
 
-### 0 · Scaffolding — [`ROADMAP.md`](ROADMAP.md) Phase 1 scope
+### 0 · Scaffolding — [`ROADMAP.md`](ROADMAP.md) Phase 1 scope; [`tech-stack.md`](docs/specs/tech-stack.md) § Open
 - [ ] Expands at gate
 
 ### 1 · Validation — [`01-data-contract.md`](docs/specs/01-data-contract.md) §3–4, laddered by [`07-testing.md`](docs/specs/07-testing.md) §1
@@ -19,7 +19,7 @@ approved gate, and appends to Parked. Nothing else: reordering, deleting and re-
 ### 2 · Simulation — [`04-simulation.md`](docs/specs/04-simulation.md)
 - [ ] Expands at gate
 
-### 3 · Config core — [`03-config.md`](docs/specs/03-config.md): root model, hash, YAML/JSON round-trip
+### 3 · Config core — [`03-config.md`](docs/specs/03-config.md): root model, hash, YAML round-trip
 - [ ] Expands at gate
 
 ### 4 · Reshape — [`02-pipeline.md`](docs/specs/02-pipeline.md) §2
