@@ -60,4 +60,17 @@ approved gate, and appends to Parked. Nothing else: reordering, deleting and re-
 Found mid-step and deliberately not done now. Items that belong to a later phase are tagged
 `→ Phase N`; Homa moves them to [`ROADMAP.md`](ROADMAP.md).
 
-_Nothing yet._
+Spec inconsistencies found in the 2026-09-27 style pass, by the stage whose gate they block:
+
+- **Stage 1** — `07` §1 says each rule maps to "exactly one" named test, but `E012`, `E020` and `E022` have two each.
+- **Stage 9** — `02` §8 passes `seed` to `cluster`, but HDBSCAN is deterministic and takes no seed (`03` § Determinism): an unused input.
+- **Stage 9** — runtime warnings have no ids: zero clusters (`02` §8) and high noise fraction (`05` §6) are manifest warnings, but the summary schema requires `id` matching `^W[0-9]{3}$` and only `W031`/`W033`/`W043` exist.
+- **Stage 10** — `05` §3 gives `ami` the range [0, 1]; `run_summary.schema.json` allows [-1, 1]. AMI can be negative, so the spec is the one that is off.
+- **Stage 10** — `cluster_size_distribution` (min/median/max/counts, `05` §2, a default in `03` `evaluation.internal_metrics`) has no slot in `summary.json`, which carries only `clustering.cluster_sizes`.
+- **Stage 10** — ground truth has no input contract: `02` §9 and `03` `external_metrics` consume it, but `01` defines no argument or validation for it, unlike the target.
+- **Stage 11** — `06` §1: the hash suffix cannot separate two runs of the *same* config in the same second — they share the hash and collide (§6). It separates different configs.
+- **Stage 11** — `06` §3's example gives `W031` an `entity_count` of 3, but series length is shared by every entity in a wide frame, so `W031` is dataset-wide.
+- **Stage 12** — `01` §6 types `labels` as `pd.Series[int]`, yet dropped entities carry `pd.NA`: that needs nullable `Int64`, or reindexing silently upcasts labels to float.
+- **Stage 12** — `02` §6 retains the fitted scaler "on the result", but `ClusterResult` (`01` §6) has no field for it.
+- **ROADMAP** — Phase 2's "Soft cluster membership probabilities" reads like Phase 1's `ClusterResult.probabilities`; `02` §8 calls the Phase 2 item "soft membership vectors". Under Rule 6 an agent could wrongly defer `probabilities`.
+- **ROADMAP** — the Phase 1 pipeline line omits `clean` (`02` stage 4).

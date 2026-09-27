@@ -1,7 +1,7 @@
 ---
 name: decisions
 status: living
-last-reviewed: 2026-09-26
+last-reviewed: 2026-09-27
 ---
 
 # Decision log
@@ -49,3 +49,9 @@ genuinely silent about, plus the reasoning that would otherwise be lost between 
 **Over:** a separate `plan.md` beside a status list; every Phase 1 step enumerated up front; GitHub Issues; gates run in plan mode.
 **Because:** a plan kept apart from its status drifts; steps enumerated past stage 2 would be guesses that churn; a tick in the same commit cannot disagree with the code; plan mode's workflow produces heavier gates than "options, tradeoff, recommendation".
 **Spec:** open — specs are silent on process.
+
+### 2026-09-27 · process · Spec style
+**Chose:** one home per fact, linked from elsewhere; each rule keeps its reason in one sentence; plain "must"/"never" instead of stacked emphasis; no history, self-description or "Related specs" footers in spec text; section numbers, rule ids and test names never renumbered.
+**Over:** self-contained specs that restate shared rules; bold, capitals and repetition to signal priority.
+**Because:** restated rules drift apart — the specs' own "each value appears exactly once", applied to themselves. Reasons stay because they are what lets a model extend a rule to cases the spec did not foresee; emphasis goes because a model that follows instructions precisely over-applies whatever is shouted, and when everything is bold nothing is. Anchors stay fixed because `BACKLOG.md` and `/step` point at them.
+**Spec:** open — specs are silent on their own style. Recorded as a rule in `CLAUDE.md` § Working with the specs.

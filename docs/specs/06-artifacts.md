@@ -2,15 +2,14 @@
 name: artifacts
 status: draft
 phase: 1
-last-reviewed: 2026-09-26
+last-reviewed: 2026-09-27
 ---
 
 # Run Artifacts
 
-What a run leaves on disk. This spec carries unusual weight because the primary caller is an
-agent that **reads results after the process has exited** — it never saw stdout, holds no
-in-memory objects, and cannot ask a follow-up question by re-running a twenty-minute extraction.
-Anything not written here is effectively lost.
+What a run leaves on disk. The primary caller reads results after the process has exited: it never
+saw stdout, holds no in-memory objects, and cannot ask a follow-up by re-running a twenty-minute
+extraction. Anything not written here is effectively lost.
 
 ## 1. Layout
 
@@ -30,36 +29,31 @@ Anything not written here is effectively lost.
   <output.dataset_dir>/         # default datasets — see 04-simulation.md
 ```
 
-Every path is resolved under the single `output.root`, which is relative to the working directory
-by default and so lands inside the repo. The default root is gitignored: generated output is
-reproducible from a config and a seed, and committing it would put binaries in git that
-[`07-testing.md` §4](07-testing.md) exists to keep out. A caller wanting results outside the repo
-sets an absolute `output.root` and changes nothing else.
+Every path resolves under the single `output.root` ([03 `output`](03-config.md)). The default root
+is gitignored because output is reproducible from a config and a seed, and committing it would put
+binaries in git that [07 §4](07-testing.md) exists to keep out.
 
-`run_name` defaults to `{timestamp}-{config_hash[:8]}`, e.g. `20260919T143022Z-a1b2c3d4`. UTC,
-ISO-8601 basic format: sorts chronologically as text, and the hash suffix makes two runs of the
-same config in the same second distinguishable.
+`run_name` defaults to `{timestamp}-{config_hash[:8]}`, e.g. `20260919T143022Z-a1b2c3d4`. UTC in
+ISO-8601 basic format sorts chronologically as text, and the hash suffix makes two runs of the same
+config in the same second distinguishable.
 
 ## 2. Atomic writes
 
-Write to a sibling temporary directory, then `rename` into place. A directory at its final path is
-**always complete**.
+Write to a sibling temporary directory, then `rename` it into place, so a directory at its final
+path is always complete. Otherwise an interrupted run leaves a directory that looks finished, and
+an agent reads a truncated `labels.parquet` with no sign anything is wrong.
 
-Without this, a run interrupted mid-write leaves a directory that looks finished, and an agent
-reading it gets a truncated `labels.parquet` with no indication anything is wrong.
-
-**The log is the one thing that cannot obey this rule.** A log is only useful while the run is
-still going, and a file inside a not-yet-renamed staging directory is not visible to anyone
-watching. So the live log is written to `<output.log_dir>/<run_name>.log`, outside the run
-directory, and a finished copy is placed inside the run directory as `run.log` at persist time.
-The cost is one duplicated file; the alternatives are a log nobody can tail, or a run directory
-that appears complete before it is.
+The log is the one exception: it is useful only while the run is still going, and a file in a
+not-yet-renamed staging directory is invisible to anyone watching. So the live log goes to
+`<output.log_dir>/<run_name>.log`, outside the run directory, and a finished copy lands in the run
+directory as `run.log` at persist time — one duplicated file, instead of a log nobody can tail or a
+run directory that appears complete before it is.
 
 ## 3. `summary.json` — the agent surface
 
-The most important artifact. Designed to be read **in full** to answer follow-up questions
-without loading a single parquet file or re-running anything. Small by construction: a few KB
-regardless of dataset size, so nothing in it scales with entity or feature count.
+The most important artifact, designed to be read in full: it answers follow-up questions without
+loading a parquet file or re-running anything. A few KB regardless of dataset size — nothing in it
+scales with entity or feature count.
 
 ```json
 {
@@ -98,28 +92,28 @@ regardless of dataset size, so nothing in it scales with entity or feature count
 }
 ```
 
-Digests are elided with `...` above for readability; real summaries carry full 64-character
-hex, as `schemas/run_summary.schema.json` enforces.
+Digests are elided with `...` for readability; real summaries carry full 64-character hex, as
+`schemas/run_summary.schema.json` enforces.
 
-Design rules, each protecting against a specific failure:
+Design rules, each guarding against a specific failure:
 
 - **`status`** is `"completed"` or `"failed"`. A failed run still writes a summary, with `error`
-  populated and stages that never ran set to `null`. A failed run that writes nothing is
-  undiagnosable without re-running the thing that failed.
-- **Absent is explicit.** `"external": null` means not applicable. A missing key would be
-  ambiguous between "not computed" and "computed as nothing".
-- **`schema_version`** is present from v1. Consumers that must tolerate evolution need a version
-  to branch on, and retrofitting one means every existing artifact is unversioned forever.
+  populated and stages that never ran set to `null`; otherwise it is undiagnosable without
+  re-running the thing that failed.
+- **Absent is explicit.** `"external": null` means not applicable; a missing key would be ambiguous
+  between "not computed" and "computed as nothing".
+- **`schema_version`** is present from v1, so consumers have a version to branch on as the schema
+  evolves. Retrofitting one leaves every existing artifact unversioned forever.
 - **`resolved_params`** inlines the full config so the summary is self-contained. `config.yaml` is
-  the human-editable copy; `summary.json` is the record of what actually ran.
-- **`fingerprint`** is `sha256` over index, column labels, and values. Answers "is this the same
-  data as last run?" without loading the input.
-- **Cluster sizes are keyed by label as a string**, since JSON object keys are strings. `-1` is not
-  included here — it is `noise_fraction`, reported once and unambiguously.
+  the human-editable copy; `summary.json` records what actually ran.
+- **`fingerprint`** is `sha256` over index, column labels and values: "is this the same data as
+  last run?" without loading the input.
+- **Cluster sizes are keyed by label as a string**, since JSON object keys are strings. `-1` is
+  excluded — it is `noise_fraction`, reported once and unambiguously.
 
-Contract: `schemas/run_summary.schema.json`. Every emitted summary is validated against it before
-being written, in production code and not only in tests — an artifact that violates its own schema
-is worse than no artifact.
+Contract: `schemas/run_summary.schema.json`. Every summary is validated against it before being
+written, in production code and not only in tests — an artifact that violates its own schema is
+worse than none.
 
 ## 4. `manifest.json` — full provenance
 
@@ -130,36 +124,29 @@ Everything needed to explain or reproduce a run. Unbounded in size; not the agen
 | `environment` | Python version, platform, and versions of `ts_cluster`, tsfresh, scikit-learn, hdbscan, umap-learn, numpy, pandas |
 | `config` | Fully resolved config and its hash |
 | `seed` | The seed, and per-stage `random_state` values as actually applied |
-| `input` | Entity count, timestep count, fingerprint, **original column labels** (dropped during the melt, per [`01-data-contract.md` §5](01-data-contract.md)) |
+| `input` | Entity count, timestep count, fingerprint, original column labels (dropped during the melt, per [01 §5](01-data-contract.md)) |
 | `validation` | Every warning raised; ids of entities dropped and the rule that dropped them |
 | `stages` | Per stage: duration, input shape, output shape, decisions taken |
 | `decisions` | Dropped feature names and their non-finite fractions; features retained after selection; PCA explained variance; user assertions such as `assume_regular` |
 | `status` | `completed` / `failed`, plus traceback on failure |
 
-Library versions are recorded because this stack's numerics move between releases. A result that
-cannot be reproduced six months later is not reproducible, and without versions there is no way to
-tell a real regression from a dependency bump.
+Library versions are recorded because this stack's numerics move between releases: without them a
+real regression is indistinguishable from a dependency bump, and a result not reproducible six
+months later is not reproducible.
 
-The manifest **accumulates during the run** and is written even when a stage raises, so a failed
-run remains diagnosable from disk.
+The manifest accumulates during the run and is written even when a stage raises
+([02 § Cross-cutting](02-pipeline.md)).
 
 ## 5. `run.log` — the human trace
 
-One file per run, named for the run: `<output.log_dir>/<run_name>.log`. Opened **before stage 1**
-and appended as the run proceeds, so it can be tailed while a twenty-minute extraction works. The
-same lines go to the stream at `output.log_level`.
+One file per run, `<output.log_dir>/<run_name>.log`, opened before stage 1 and appended as the run
+proceeds, so it can be tailed while a twenty-minute extraction works. The same lines go to the
+stream at `output.log_level`. It narrates execution: stage entry and exit, durations, input and
+output shapes, the config hash, and each warning as it is raised.
 
-Contents are a narrative of execution: stage entry and exit, durations, input and output shapes,
-the config hash, and any warning as it is raised.
-
-> **Nothing may live only in the log.** Every warning, decision, and result recorded in the log is
-> *also* in `manifest.json` or `summary.json`. The log is a convenience for a human watching; the
-> manifest is the record. See [`02-pipeline.md` § Logging vs. recording](02-pipeline.md).
-
-This is the rule that makes a persisted log safe to add. Without it, the log becomes the easiest
-place to put a finding, and the primary caller — an agent reading `summary.json` after the process
-exited — never sees it. A durable log file makes that mistake *more* tempting than an ephemeral
-stream does, not less.
+**Nothing may live only in the log.** Every warning, decision and result in it is also in
+`manifest.json` or `summary.json`; the rule and its reason are in
+[02 § Logging vs. recording](02-pipeline.md).
 
 | Situation | Behaviour |
 |---|---|
@@ -168,31 +155,30 @@ stream does, not less.
 | Run fails | Log is closed and retained, and still copied in if the run directory was written. A failed run's log is the most valuable one |
 | Colliding `<run_name>.log` | Raises, like a colliding run directory. Nothing is ever appended to a previous run's log |
 
+**Why the log survives `persist = false`.** That setting is for exploratory runs nobody wants to
+keep — exactly the runs that misbehave, when a diagnostic trace is the one thing worth having. The
+log is small, bounded by the run's duration, and costs nothing to keep. The exception stays narrow
+because the log carries no results: anything a caller needs is in the manifest and summary, which
+`persist = false` genuinely does not write.
+
 ## 6. Writing rules
 
 - Parquet for tabular artifacts — lossless dtypes and column labels, unlike CSV.
-- `labels.parquet` carries the **full input entity index**, including dropped entities with label
-  `pd.NA`. Distinguishing "excluded from the run" from "clustered as noise" (`-1`) is the point;
-  collapsing them corrupts downstream analysis silently.
-- `output.persist = false` writes **no run directory** — not a partial one, not an empty one. The
-  per-run log file is the sole exception and is still written; see §5.
-- **`output.root`, `output.log_dir` and `output.run_dir` are all checked for writability before
-  stage 1**, and the log file is opened there and then. Discovering an unwritable directory after a
-  twenty-minute extraction is a spec failure, not an unlucky run — and that applies to the log
-  path too, which is now on the critical path.
+- `labels.parquet` carries the full input entity index, dropped entities labelled `pd.NA`
+  ([01 §6](01-data-contract.md)), so "excluded from the run" never collapses into "clustered as
+  noise" (`-1`).
+- `output.persist = false` writes no run directory — not a partial one, not an empty one. The
+  per-run log file is the sole exception (§5).
+- `output.root`, `output.log_dir` and `output.run_dir` are all checked for writability before
+  stage 1, and the log file is opened then. Discovering an unwritable directory after a
+  twenty-minute extraction is a spec failure, not an unlucky run — and the log path is on that
+  critical path too.
 - Nothing is ever overwritten. A colliding `run_name` raises, and so does a colliding log file.
 
 ## 7. Retention
 
-No automatic cleanup in Phase 1. Run directories accumulate and deleting them is the user's
-decision — a library that quietly removes prior results is a library that loses someone's work.
+No automatic cleanup in Phase 1. Run directories accumulate; deleting them is the user's decision,
+because a library that quietly removes prior results loses someone's work.
 
 > Phase 7 — the plugin surface will need run discovery and listing; `summary.json` is shaped to be
 > the index for it.
-
-## Related specs
-
-- [`03-config.md`](03-config.md) — `output.*` fields
-- [`01-data-contract.md`](01-data-contract.md) — entity index and `pd.NA` convention
-- [`05-evaluation.md`](05-evaluation.md) — metric contents
-- `schemas/run_summary.schema.json` — hand-authored contract for §3
