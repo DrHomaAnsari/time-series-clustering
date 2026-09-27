@@ -28,13 +28,14 @@ layout ([02](02-pipeline.md) § Module layout).
 | umap-learn | Non-linear reduction. Brings numba, and runs single-threaded when seeded — the price of reproducibility | [03](03-config.md) § Determinism |
 | hdbscan | Clustering, behind a one-module adapter. Chosen over `sklearn.cluster.HDBSCAN` for `relative_validity_` and Phase 2's `approximate_predict` | [02 §8](02-pipeline.md) |
 | pyarrow | Parquet engine. Its pandas metadata restores datetime and numeric column labels and `Int64` with `pd.NA`, which fastparquet does not reliably do; CSV, JSON and pickle, the dependency-free alternatives, lose dtypes or are unsafe to load | [04 §5](04-simulation.md), [06 §6](06-artifacts.md) |
+| PyYAML | Config files, via `safe_load`/`safe_dump` only. YAML 1.1 reads `no`/`off` as booleans, but every config field is strictly typed, so a mistyped value fails validation instead of passing through. ruamel.yaml's comment-preserving round-trip buys nothing, since we never edit a user's file | [03](03-config.md) |
 
 ## Formats
 
 | What | Format | Why |
 |---|---|---|
 | Tables, simulated datasets | Parquet | Lossless dtypes and column labels; CSV rereads a time axis as strings |
-| Config | YAML and JSON | Lossless round-trip; maps onto the Phase 7 tool surface |
+| Config | YAML | One file format for people and agents; a Phase 7 tool call passes a dict instead of a file |
 | Run summary | JSON, schema-validated at runtime | Against [`schemas/run_summary.schema.json`](schemas/run_summary.schema.json) |
 | Config hash, data fingerprint | sha256 | The config hash is taken over canonical JSON of the resolved config |
 
@@ -47,7 +48,6 @@ mypy, clean on `src/ts_cluster`.
 
 Required by the specs, justified by none, so Rule 3 blocks each until a spec records why:
 
-- **YAML library** — for [03](03-config.md)'s round-trip
 - **JSON Schema validator** — for runtime summary validation ([schemas](schemas/README.md))
 - **CI** — [schemas](schemas/README.md) assumes CI regenerates `config.schema.json`; no spec defines it
 - **Notebook tooling** — the example notebook is a Phase 1 deliverable

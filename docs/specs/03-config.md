@@ -13,8 +13,9 @@ anything absent is deliberately not configurable.
 - **Model** — nested pydantic v2, `extra="forbid"` at every level. An agent that misremembers a
   field name must get a loud `ValidationError` naming the valid alternatives, not a silently
   ignored setting and a wrong result.
-- **Serialisation** — fully to and from YAML and JSON, which makes the Phase 7 plugin surface close
-  to a direct mapping of this document.
+- **Serialisation** — fully to and from YAML, the only config file format. The model also accepts
+  a plain dict, which is how a Phase 7 tool call reaches it, so that surface stays close to a direct
+  mapping of this document. JSON appears only internally: the hash, the schema and `summary.json`.
 - **Documentation** — every field states its effect on results, not just its type. An undocumented
   default eventually gets changed by someone who didn't know what it was holding up (Rule 2 in
   [`CLAUDE.md`](../../CLAUDE.md)).

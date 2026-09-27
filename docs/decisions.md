@@ -61,3 +61,15 @@ genuinely silent about, plus the reasoning that would otherwise be lost between 
 **Over:** fastparquet; Feather (Arrow IPC); pandas' dependency-free writers (CSV, JSON, pickle, SQLite); tables kept in memory only.
 **Because:** only pyarrow reliably restores datetime column labels (else E010 fires on our own data) and `Int64` with `pd.NA` (else "dropped" collapses toward noise), and keeps the fingerprint stable across a reread. Pickle is lossless but pandas-version-bound and runs code on load; Feather is equally lossless but has less reach in other tools; in-memory only fails the Phase 1 exit.
 **Spec:** `tech-stack.md` amended — pyarrow added to the libraries table and removed from Open; `07-testing.md` Artifacts row gains the round-trip assertion that pins the lossless claim.
+
+### 2026-09-27 · stack · Config file format
+**Chose:** YAML as the only config file format; the model also accepts a dict; JSON kept internal (canonical-JSON hash, `config.schema.json`, `summary.json`).
+**Over:** YAML and JSON config files both supported.
+**Because:** one format is one less path to test and document. Phase 7 tool calls arrive as dicts, not files. The hash needs a canonical form, which YAML lacks.
+**Spec:** `03-config.md` Serialisation, `tech-stack.md` Formats and `07-testing.md` Config row amended.
+
+### 2026-09-27 · stack · YAML library
+**Chose:** PyYAML, `safe_load`/`safe_dump` only.
+**Over:** ruamel.yaml (YAML 1.2, comment-preserving); strictyaml.
+**Because:** pydantic's strict field types turn YAML 1.1's implicit-typing quirks into loud validation errors, so 1.2 semantics buy little. We only write resolved configs and never edit user files, so comment preservation is unused. PyYAML is the most widely used option with the stablest API.
+**Spec:** `tech-stack.md` amended — PyYAML added to the libraries table and removed from Open.

@@ -60,7 +60,7 @@ mechanically: a rule without a test, or a test naming a rule that does not exist
 | Area | Assertions |
 |---|---|
 | Errors | All errors collected and raised together, not one per round-trip; messages name expected, received and remedy; offending ids truncated at 10 with a total count |
-| Config | `extra="forbid"` rejects unknown fields; out-of-range values rejected; YAML/JSON round-trip is lossless; hash is stable across runs and identical for explicit-vs-defaulted equivalents |
+| Config | `extra="forbid"` rejects unknown fields; out-of-range values rejected; YAML round-trip is lossless; hash is stable across runs and identical for explicit-vs-defaulted equivalents |
 | Melt | Row count is `n_entities × n_timesteps`; sorted by `(entity_id, timestep)`; `timestep` is integer position, not the original label |
 | Result | Entity-indexed outputs carry the full input index; dropped entities are `pd.NA`, never `-1`; `labels` has dtype `Int64` |
 | Artifacts | `summary.json` validates against its schema; `status: failed` still writes a summary; colliding `run_name` raises; `persist=false` writes no run directory; a wide frame with datetime column labels and an `Int64` labels series with `pd.NA` round-trip through Parquet with dtypes intact |
