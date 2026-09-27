@@ -72,7 +72,7 @@ plugins are the point of the config-first API, not an afterthought.
 Refusals, not backlog items: an agent asked for one declines and points here.
 
 - **Forecasting.** No prediction of future values. The optional target
-  ([01 §4](01-data-contract.md)) is a feature-selection signal only.
+  ([01 §4.1](01-data-contract.md)) is a feature-selection signal only.
 - **A general time-series toolkit.** No decomposition, changepoint detection, anomaly scoring or
   similarity search as standalone public API.
 - **Deep learning in Phase 1.** No learned representations, autoencoders, or embeddings beyond the

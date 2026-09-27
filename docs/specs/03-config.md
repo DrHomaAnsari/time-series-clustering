@@ -86,7 +86,7 @@ manifest. Dropped feature names are always recorded.
   collinear by construction (many are parameterised variants of each other), and that redundancy
   distorts distances by re-weighting whatever the duplicated features measure.
 - **`supervised`** — tsfresh `select_features` against the target from
-  [01 §4](01-data-contract.md), which is never a cluster label. Requires `target_type`: tsfresh
+  [01 §4.1](01-data-contract.md), which is never a cluster label. Requires `target_type`: tsfresh
   can auto-detect it, but declaring it makes the run reproducible from the config alone.
 
 ## `scaling`
@@ -149,9 +149,9 @@ HDBSCAN, via the standalone `hdbscan` package ([02 §8](02-pipeline.md) says why
 
 | Field | Type | Default | Effect |
 |---|---|---|---|
-| `internal_metrics` | `list[str]` | `["relative_validity", "n_clusters", "noise_fraction", "cluster_size_distribution"]` | Computed on every run |
-| `external_metrics` | `list[str]` | `["ari", "ami"]` | Computed only when ground-truth labels are supplied (simulated data) |
-| `noise_fraction_warn_above` | `float ∈ [0,1]` | `0.5` | Emits a manifest warning, never an error |
+| `internal_metrics` | `list[str]` | `["relative_validity", "n_clusters", "noise_fraction", "cluster_sizes"]` | Computed on every run |
+| `external_metrics` | `list[str]` | `["ari", "ami"]` | Computed only when ground-truth labels are supplied ([01 §4.2](01-data-contract.md)); otherwise reported as `null` |
+| `noise_fraction_warn_above` | `float ∈ [0,1]` | `0.5` | Above this, warning `W102` — never an error |
 
 ## `output`
 
@@ -165,7 +165,7 @@ unit.
 | `run_dir` | `Path` | `"runs"` | Parent of run directories, resolved under `root`. Must be relative; an absolute value raises, because relocating output is `root`'s job and two ways to express one thing is one too many |
 | `log_dir` | `Path` | `"logs"` | Where per-run log files go, resolved under `root`. Must be relative. Deliberately not inside `run_dir` ([06 §2](06-artifacts.md)) |
 | `dataset_dir` | `Path` | `"datasets"` | Where [04](04-simulation.md) writes generated datasets, resolved under `root`. Must be relative |
-| `run_name` | `str` \| `null` | `null` | `null` = `{timestamp}-{config_hash[:8]}`. Names both the run directory and its log file, so the two match by inspection |
+| `run_name` | `str` \| `null` | `null` | `null` = `{timestamp}-{config_hash[:8]}`, timestamp to the millisecond ([06 §1](06-artifacts.md)). Names both the run directory and its log file, so the two match by inspection |
 | `persist` | `bool` | `true` | `false` returns results in memory only and writes no run directory. The log file is still written ([06 §5](06-artifacts.md) says why) |
 | `log_level` | `"DEBUG" \| "INFO" \| "WARNING" \| "ERROR"` | `"INFO"` | Verbosity of both the log file and the stream; affects the log only, never results. The log file cannot be disabled in Phase 1 |
 | `write_feature_matrix` | `bool` | `true` | The largest artifact; disable when disk-bound |

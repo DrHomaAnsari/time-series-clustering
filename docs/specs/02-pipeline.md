@@ -41,12 +41,15 @@ hidden dependencies on unrelated settings.
 
 | | |
 |---|---|
-| **In** | `pd.DataFrame` (wide), `pd.Series \| None` (target), `InputConfig` |
+| **In** | `pd.DataFrame` (wide), `pd.Series \| None` (target), `pd.Series \| None` (ground truth), `InputConfig`, `selection.method` |
 | **Out** | `ValidationReport` |
-| **Fails** | Any `E0xx` in [01 §3](01-data-contract.md) |
+| **Fails** | Any `E0xx` in [01 §3–4](01-data-contract.md) |
 
 All errors are collected and raised together. Entities removed by `drop_entity` policies are
 recorded by id in the report and carried through to the manifest and the final result.
+
+`selection.method` is the one field validation needs from outside its own section: `E040` and
+`W043` depend on it, and checking them here keeps every input error in the same up-front report.
 
 ## 2. `melt`
 
@@ -124,9 +127,11 @@ Records: feature count before and after, and the retained feature names.
 | **Out** | scaled matrix, fitted scaler |
 | **Fails** | Should not |
 
-The fitted scaler is retained on the result.
+The stage returns the fitted scaler, but `ClusterResult` does not carry it: nothing in Phase 1
+reads it.
 
-> Phase 2 — transforming unseen entities needs it.
+> Phase 2 — transforming unseen entities needs the fitted scaler, reducer and clusterer;
+> persisting fitted state is a Phase 2 item ([ROADMAP](../../ROADMAP.md)).
 
 ## 7. `reduce`
 
@@ -146,9 +151,9 @@ Records: method, resolved `n_components`, and for PCA the explained-variance rat
 
 | | |
 |---|---|
-| **In** | embedding, `ClusteringConfig`, `seed` |
+| **In** | embedding, `ClusteringConfig` — no `seed`: HDBSCAN is deterministic ([03](03-config.md)) |
 | **Out** | labels, probabilities, fitted clusterer |
-| **Fails** | Should not. Zero clusters found is a valid result, reported with a manifest warning |
+| **Fails** | Should not. Zero clusters found is a valid result, reported as warning `W101` |
 
 ### Implementation decision: standalone `hdbscan`, not `sklearn.cluster.HDBSCAN`
 
@@ -170,12 +175,15 @@ disables it while requesting that metric, rather than returning an absent score.
 
 | | |
 |---|---|
-| **In** | embedding, labels, fitted clusterer, optional ground truth, `EvaluationConfig` |
+| **In** | embedding, labels, fitted clusterer, optional ground truth ([01 §4.2](01-data-contract.md)), `EvaluationConfig` |
 | **Out** | `dict` of metrics |
 | **Fails** | Requesting an external metric without ground truth |
 
+The orchestrator requests external metrics only when ground truth is supplied
+([03 `evaluation`](03-config.md)), so that failure guards direct calls to the stage.
+
 Noise is excluded from internal metric computation but always reported as `noise_fraction`. A high
-noise fraction records a manifest warning, never an error.
+noise fraction records warning `W102`, never an error.
 
 ## 10. `persist`
 
@@ -201,6 +209,20 @@ fallback — that would ship a result nobody chose.
 Each stage appends to a manifest built up across the run: duration, input and output shapes, and
 decisions taken (features dropped, entities removed, components retained). It is written even when
 a later stage fails, so a failed run is still diagnosable from disk.
+
+### Runtime warnings
+
+Validation ids (`E0xx`/`W0xx`) are defined in [01 §3–4](01-data-contract.md). Warnings raised by
+later stages are numbered from `W101`:
+
+| ID | Stage | Raised when |
+|---|---|---|
+| `W101` | 8. `cluster` | Zero clusters found — a valid result, not an error |
+| `W102` | 9. `evaluate` | `noise_fraction` exceeds `evaluation.noise_fraction_warn_above` |
+
+Like validation warnings, they go to the manifest and to `summary.json` `warnings`, never raise, and
+carry ids so the log-vs-summary test can match them ([07 §1](07-testing.md)). Each is tested with
+its own stage, not on stage 1's rule→test ladder.
 
 ### Logging vs. recording
 

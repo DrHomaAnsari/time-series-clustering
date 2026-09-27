@@ -122,9 +122,11 @@ partial-autocorrelation lags run to 9; `agg_linear_trend` chunks at 5/10/50). Be
 density clustering with the default `min_cluster_size` of 5 cannot produce a meaningful partition.
 The warnings mark where results become unreliable rather than impossible.
 
-## 4. Optional target — supervised feature selection
+## 4. Optional inputs
 
-A separate argument, never a column of the wide frame.
+Separate arguments, never columns of the wide frame.
+
+### 4.1 Target — supervised feature selection
 
 | Element | Requirement |
 |---|---|
@@ -147,6 +149,26 @@ A separate argument, never a column of the wide frame.
 
 `W043` warns instead of ignoring silently, because a target that has no effect almost always means
 the caller misunderstands what selection does.
+
+### 4.2 Ground truth — external metrics
+
+Known group labels, in practice available only for simulated data ([04](04-simulation.md)).
+Validated with the other inputs, then used only by `evaluate` to compute the external metrics in
+[05 §3](05-evaluation.md) — never by selection or any other stage, which would leak the answer.
+Without it, external metrics are not computed and are reported as `null`.
+
+| Element | Requirement |
+|---|---|
+| Container | `pandas.Series` |
+| Index | Identical to the input entity index — same values, any order |
+| Values | Integers: `≥ 0` for a structured group, `-1` for a structureless entity |
+| Length | One label per entity |
+
+| ID | Rule | Severity |
+|---|---|---|
+| `E050` | Ground-truth index matches the entity index exactly (as a set) | Error |
+| `E051` | Ground truth contains no nulls | Error |
+| `E052` | Ground-truth labels are integers ≥ `-1` | Error |
 
 ## 5. Internal representation — the melt
 
@@ -176,7 +198,7 @@ A run returns a `ClusterResult`:
 
 | Attribute | Type | Content |
 |---|---|---|
-| `labels` | `pd.Series[int]` | Cluster assignment per entity, indexed by entity id. `-1` is noise |
+| `labels` | `pd.Series[Int64]` | Cluster assignment per entity, indexed by entity id. `-1` is noise; `pd.NA` marks a dropped entity — hence nullable `Int64`, which never turns labels into floats |
 | `probabilities` | `pd.Series[float]` | HDBSCAN per-entity cluster-membership strength |
 | `feature_matrix` | `pd.DataFrame` | Entities × selected features, post-selection, pre-scaling |
 | `embedding` | `pd.DataFrame` \| `None` | Reduction output; `None` when `reduction.method = "none"` |

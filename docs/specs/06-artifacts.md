@@ -33,9 +33,10 @@ Every path resolves under the single `output.root` ([03 `output`](03-config.md))
 is gitignored because output is reproducible from a config and a seed, and committing it would put
 binaries in git that [07 §4](07-testing.md) exists to keep out.
 
-`run_name` defaults to `{timestamp}-{config_hash[:8]}`, e.g. `20260919T143022Z-a1b2c3d4`. UTC in
-ISO-8601 basic format sorts chronologically as text, and the hash suffix makes two runs of the same
-config in the same second distinguishable.
+`run_name` defaults to `{timestamp}-{config_hash[:8]}`, e.g. `20260919T143022.123Z-a1b2c3d4`: UTC
+in ISO-8601 basic format with milliseconds, so names sort chronologically as text and two runs of
+one config collide only if they start in the same millisecond. The hash suffix identifies the
+config at a glance.
 
 ## 2. Atomic writes
 
@@ -58,9 +59,9 @@ scales with entity or feature count.
 ```json
 {
   "schema_version": "1.0",
-  "run_name": "20260919T143022Z-a1b2c3d4",
+  "run_name": "20260919T143022.123Z-a1b2c3d4",
   "status": "completed",
-  "created_at": "2026-09-19T14:30:22Z",
+  "created_at": "2026-09-19T14:30:22.123Z",
   "duration_seconds": 42.7,
   "config_hash": "a1b2c3d4...",
   "input": {
@@ -86,7 +87,7 @@ scales with entity or feature count.
     "external": null
   },
   "warnings": [
-    {"id": "W031", "message": "...", "entity_count": 3}
+    {"id": "W031", "message": "...", "entity_count": null}
   ],
   "resolved_params": {"...": "the config, inlined"}
 }

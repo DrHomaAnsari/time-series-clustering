@@ -21,7 +21,7 @@ stop and report it rather than pull the later work forward.
 
 - Package `ts_cluster`, Python 3.11+, managed with `uv`.
 - Input: wide DataFrame, univariate, clean, regularly sampled — validated, not repaired.
-- Pipeline: validate → melt → tsfresh extraction → feature selection → scaling →
+- Pipeline: validate → melt → tsfresh extraction → cleaning → feature selection → scaling →
   PCA | UMAP | none → HDBSCAN → evaluation → persistence.
 - Config-driven public API; the config fully determines a run.
 - Simulation module producing labelled synthetic datasets, written to disk.
@@ -41,7 +41,8 @@ Turns exploratory labels into persistent ones that downstream systems can depend
 - Persist and reload fitted pipeline state.
 - Label stability across refits: clusters keep their identity when the model is retrained. HDBSCAN
   does not provide this natively; it needs an explicit matching strategy.
-- Soft cluster membership probabilities.
+- Soft membership vectors — each entity's membership across all clusters, beyond Phase 1's
+  single per-entity `probabilities` value.
 - Golden-file regression tests and property-based tests added to the suite.
 
 **Known tension:** stable labels are hard when reduction is UMAP, whose embedding is not a stable

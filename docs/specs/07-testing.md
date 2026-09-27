@@ -25,7 +25,7 @@ break while changing something unrelated.
 
 ### Traceability — every rule has a test
 
-Each id in [01 §3](01-data-contract.md) maps to exactly one named test. This table is checked
+Each id in [01 §3–4](01-data-contract.md) maps to at least one named test. This table is checked
 mechanically: a rule without a test, or a test naming a rule that does not exist, fails the suite.
 
 | Rule | Test |
@@ -51,6 +51,9 @@ mechanically: a rule without a test, or a test naming a rule that does not exist
 | `E041` | `test_rejects_target_index_mismatch` |
 | `E042` | `test_rejects_null_target_values` |
 | `W043` | `test_warns_when_target_ignored` |
+| `E050` | `test_rejects_truth_index_mismatch` |
+| `E051` | `test_rejects_null_truth_values` |
+| `E052` | `test_rejects_invalid_truth_labels` |
 
 ### Beyond validation
 
@@ -59,10 +62,11 @@ mechanically: a rule without a test, or a test naming a rule that does not exist
 | Errors | All errors collected and raised together, not one per round-trip; messages name expected, received and remedy; offending ids truncated at 10 with a total count |
 | Config | `extra="forbid"` rejects unknown fields; out-of-range values rejected; YAML/JSON round-trip is lossless; hash is stable across runs and identical for explicit-vs-defaulted equivalents |
 | Melt | Row count is `n_entities × n_timesteps`; sorted by `(entity_id, timestep)`; `timestep` is integer position, not the original label |
-| Result | Entity-indexed outputs carry the full input index; dropped entities are `pd.NA`, never `-1` |
+| Result | Entity-indexed outputs carry the full input index; dropped entities are `pd.NA`, never `-1`; `labels` has dtype `Int64` |
 | Artifacts | `summary.json` validates against its schema; `status: failed` still writes a summary; colliding `run_name` raises; `persist=false` writes no run directory |
 | Output paths | Relative `output.root` resolves against the working directory; absolute `root` is honoured; an absolute `run_dir`, `log_dir` or `dataset_dir` raises; `root`, `run_dir` and `log_dir` are checked for writability before stage 1, not after extraction |
 | Logging | Log file appears at `<log_dir>/<run_name>.log`, opened before stage 1; copied into the run directory as `run.log` on persist; `persist=false` still writes it, copies nothing, and leaves `ClusterResult.log_path` pointing at it; a failed run retains it; a colliding log filename raises |
+| Runtime warnings | `W101` when no clusters are found and `W102` when `noise_fraction` exceeds `evaluation.noise_fraction_warn_above` ([02 § Runtime warnings](02-pipeline.md)); each lands in `summary.json` `warnings`, and the run still completes |
 | **Log is never the only record** | Every warning id that appears in the log also appears in `summary.json` `warnings` — the test that makes a persisted log safe to have ([02 § Logging vs. recording](02-pipeline.md)) |
 
 ## 2. Synthetic ground-truth tests

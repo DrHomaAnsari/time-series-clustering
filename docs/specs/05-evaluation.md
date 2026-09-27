@@ -28,7 +28,7 @@ be correct *about*. Correctness assertions therefore go through external metrics
 | `relative_validity` | `hdbscan`'s `relative_validity_` | DBCV-style density-based validity. **Primary** |
 | `n_clusters` | Label count, excluding `-1` | Number of clusters found |
 | `noise_fraction` | Share of entities labelled `-1` | Headline diagnostic |
-| `cluster_size_distribution` | min / median / max / counts | Detects one-giant-cluster degeneracy |
+| `cluster_sizes` | Entity count per label, excluding `-1` | Detects one-giant-cluster degeneracy |
 
 **Why not silhouette.** It assumes convex, roughly equal-sized clusters and scores compactness
 against separation with centroid-style geometry — but HDBSCAN is chosen precisely to find clusters
@@ -48,12 +48,12 @@ size or dimensionality. Binding on implementation and on any agent tuning the pi
 
 ## 3. External metrics
 
-Computed when ground truth is supplied.
+Computed when ground truth ([01 §4.2](01-data-contract.md)) is supplied.
 
 | Metric | Range | Meaning |
 |---|---|---|
 | `ari` | [-0.5, 1] | Adjusted Rand index. **Primary correctness metric.** Chance-corrected, so 0 means no better than random |
-| `ami` | [0, 1] | Adjusted mutual information. Reported alongside; behaves differently when cluster sizes are very unbalanced |
+| `ami` | ≤ 1 | Adjusted mutual information. Chance-corrected too, so it can be negative. Reported alongside; behaves differently when cluster sizes are very unbalanced |
 | `noise_recall` | [0, 1] | Share of true-noise entities (truth `-1`) that were labelled `-1` |
 | `n_clusters_error` | ℤ | `n_clusters` minus the number of true structured groups. Signed, so over- and under-clustering are distinguishable |
 
@@ -124,6 +124,6 @@ two copies of a number invite disagreement. External metrics appear only when gr
 supplied; their absence is explicit (`null`), never an omitted key, so an agent can tell "not
 applicable" from "missing".
 
-`noise_fraction` above `evaluation.noise_fraction_warn_above` records a manifest warning, never an
-error. A high noise fraction is a true statement about the data; suppressing it would be the very
+`noise_fraction` above `evaluation.noise_fraction_warn_above` records warning `W102`
+([02 § Runtime warnings](02-pipeline.md)), never an error. A high noise fraction is a true statement about the data; suppressing it would be the very
 failure this library exists to prevent.
