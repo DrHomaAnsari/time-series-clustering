@@ -20,6 +20,8 @@ relevant spec before writing code; do not infer intent from the absence of code.
 
 | Path | What |
 |---|---|
+| [`docs/specs/mission.md`](docs/specs/mission.md) | **Constitution** — problem, principles, scope and Phase 1 exit, in one page. Start here |
+| [`docs/specs/tech-stack.md`](docs/specs/tech-stack.md) | **Constitution** — every library and format, why it was chosen, and what is still open |
 | [`docs/specs/00-product.md`](docs/specs/00-product.md) | Purpose, non-goals, definition of done, **glossary** |
 | [`docs/specs/01-data-contract.md`](docs/specs/01-data-contract.md) | Input/output schemas, validation rules |
 | [`docs/specs/02-pipeline.md`](docs/specs/02-pipeline.md) | Stage-by-stage contract |
